@@ -11,8 +11,15 @@ variable "name_prefix" {
 }
 
 variable "key_name" {
-  description = "Name of an existing EC2 key pair in the target region."
+  description = "Use an existing EC2 key pair by name. When null, the module creates and manages a new key pair."
   type        = string
+  default     = null
+}
+
+variable "key_pair_name" {
+  description = "Name for the module-created EC2 key pair. Defaults to {name_prefix}-key."
+  type        = string
+  default     = null
 }
 
 variable "ssh_allowed_cidr_blocks" {
@@ -49,4 +56,16 @@ variable "nat_instance_type" {
   description = "Instance type for the NAT instance."
   type        = string
   default     = "t3.micro"
+}
+
+variable "nat_root_volume_size" {
+  description = "Root EBS volume size in GiB for the NAT instance."
+  type        = number
+  default     = 10
+}
+
+variable "private_root_volume_size" {
+  description = "Root EBS volume size in GiB for private EC2 instances."
+  type        = number
+  default     = 20
 }

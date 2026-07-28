@@ -29,8 +29,28 @@ variable "availability_zone" {
 }
 
 variable "key_name" {
-  description = "Name of an existing EC2 key pair used for SSH to the NAT instance and private instances."
+  description = "Name of an existing EC2 key pair. When null, a new key pair is created and managed by this module."
   type        = string
+  default     = null
+}
+
+variable "key_pair_name" {
+  description = "Name for the module-created EC2 key pair. Defaults to {name_prefix}-key."
+  type        = string
+  default     = null
+}
+
+variable "deploy_ssh_private_key_to_nat" {
+  description = "Install the SSH private key on the NAT instance for manual hop-by-hop SSH. Defaults to true when the module creates the key pair."
+  type        = bool
+  default     = null
+}
+
+variable "ssh_private_key_pem" {
+  description = "Optional PEM private key to install on the NAT instance when using an existing key_name with deploy_ssh_private_key_to_nat."
+  type        = string
+  default     = null
+  sensitive   = true
 }
 
 variable "ssh_allowed_cidr_blocks" {
@@ -84,6 +104,40 @@ variable "nat_instance_ssh_user" {
   description = "SSH username for the NAT instance."
   type        = string
   default     = "ec2-user"
+}
+
+variable "nat_root_volume_size" {
+  description = "Root EBS volume size in GiB for the NAT instance."
+  type        = number
+  default     = 10
+
+  validation {
+    condition     = var.nat_root_volume_size >= 8
+    error_message = "nat_root_volume_size must be at least 8 GiB."
+  }
+}
+
+variable "private_root_volume_size" {
+  description = "Root EBS volume size in GiB for private EC2 instances."
+  type        = number
+  default     = 20
+
+  validation {
+    condition     = var.private_root_volume_size >= 8
+    error_message = "private_root_volume_size must be at least 8 GiB."
+  }
+}
+
+variable "root_volume_type" {
+  description = "EBS volume type for instance root volumes."
+  type        = string
+  default     = "gp3"
+}
+
+variable "root_volume_encrypted" {
+  description = "Whether to encrypt instance root EBS volumes."
+  type        = bool
+  default     = false
 }
 
 variable "tags" {

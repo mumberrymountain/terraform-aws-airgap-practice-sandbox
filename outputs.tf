@@ -1,3 +1,19 @@
+output "key_pair_name" {
+  description = "EC2 key pair name attached to the instances."
+  value       = local.key_name
+}
+
+output "private_key_pem" {
+  description = "Private key PEM for the module-created key pair. Null when an existing key_name was provided."
+  value       = try(tls_private_key.ssh[0].private_key_pem, null)
+  sensitive   = true
+}
+
+output "private_key_save_command" {
+  description = "Command to save the generated private key to a local PEM file."
+  value = var.key_name == null ? "terraform output -raw private_key_pem > ${local.key_file_name} && chmod 400 ${local.key_file_name}" : null
+}
+
 output "vpc_id" {
   description = "ID of the created VPC."
   value       = aws_vpc.this.id
@@ -49,11 +65,24 @@ output "ssh_proxy_command" {
 }
 
 output "ssh_example" {
-  description = "Example SSH command for the first private instance via NAT."
-  value       = "ssh -J ${var.nat_instance_ssh_user}@${aws_eip.nat.public_ip} ${var.private_instance_ssh_user}@${aws_instance.private[0].private_ip}"
+  description = "Example SSH command for the first private instance via ProxyJump (-J)."
+  value       = var.key_name == null ? "ssh -i ${local.key_file_name} -J ${var.nat_instance_ssh_user}@${aws_eip.nat.public_ip} ${var.private_instance_ssh_user}@${aws_instance.private[0].private_ip}" : "ssh -J ${var.nat_instance_ssh_user}@${aws_eip.nat.public_ip} ${var.private_instance_ssh_user}@${aws_instance.private[0].private_ip}"
+}
+
+output "ssh_via_nat_example" {
+  description = "Example commands for manual hop-by-hop SSH through the NAT instance."
+  value = local.deploy_ssh_key_to_nat ? join("\n", [
+    "ssh -i ${local.key_file_name} ${var.nat_instance_ssh_user}@${aws_eip.nat.public_ip}",
+    "ssh private-1",
+  ]) : "Enable deploy_ssh_private_key_to_nat and provide ssh_private_key_pem when using an existing key_name."
+}
+
+output "scp_via_nat_example" {
+  description = "Example SCP command run from the NAT instance to a private host."
+  value       = local.deploy_ssh_key_to_nat ? "scp ./local-file private-1:/tmp/" : null
 }
 
 output "scp_example" {
   description = "Example SCP command for copying a file to the first private instance via NAT."
-  value       = "scp -J ${var.nat_instance_ssh_user}@${aws_eip.nat.public_ip} ./local-file ${var.private_instance_ssh_user}@${aws_instance.private[0].private_ip}:/tmp/"
+  value       = var.key_name == null ? "scp -i ${local.key_file_name} -J ${var.nat_instance_ssh_user}@${aws_eip.nat.public_ip} ./local-file ${var.private_instance_ssh_user}@${aws_instance.private[0].private_ip}:/tmp/" : "scp -J ${var.nat_instance_ssh_user}@${aws_eip.nat.public_ip} ./local-file ${var.private_instance_ssh_user}@${aws_instance.private[0].private_ip}:/tmp/"
 }

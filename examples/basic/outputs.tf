@@ -1,3 +1,19 @@
+output "key_pair_name" {
+  value = module.airgap.key_pair_name
+}
+
+output "private_key_save_command" {
+  value = module.airgap.private_key_save_command
+}
+
+output "ssh_via_nat_example" {
+  value = module.airgap.ssh_via_nat_example
+}
+
+output "scp_via_nat_example" {
+  value = module.airgap.scp_via_nat_example
+}
+
 output "vpc_id" {
   value = module.airgap.vpc_id
 }

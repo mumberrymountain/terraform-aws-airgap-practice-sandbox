@@ -121,15 +121,57 @@ resource "aws_security_group" "private" {
   })
 }
 
+resource "aws_instance" "private" {
+  count = var.private_instance_count
+
+  ami                    = local.private_instance_ami_id
+  instance_type          = var.private_instance_type
+  subnet_id              = aws_subnet.private.id
+  vpc_security_group_ids = [aws_security_group.private.id]
+  key_name               = local.key_name
+
+  root_block_device {
+    volume_size           = var.private_root_volume_size
+    volume_type           = var.root_volume_type
+    encrypted             = var.root_volume_encrypted
+    delete_on_termination = true
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.name_prefix}-private-${count.index + 1}"
+    Role = "private"
+  })
+}
+
 resource "aws_instance" "nat" {
   ami                         = local.nat_instance_ami_id
   instance_type               = var.nat_instance_type
   subnet_id                   = aws_subnet.public.id
   vpc_security_group_ids      = [aws_security_group.nat.id]
-  key_name                    = var.key_name
+  key_name                    = local.key_name
   source_dest_check           = false
   associate_public_ip_address = true
-  user_data                   = local.nat_user_data
+  user_data = templatefile("${path.module}/templates/nat_user_data.sh.tftpl", {
+    deploy_ssh_key     = local.deploy_ssh_key_to_nat
+    private_key_pem    = local.nat_ssh_private_key_pem
+    nat_ssh_user       = var.nat_instance_ssh_user
+    private_ssh_user   = var.private_instance_ssh_user
+    private_host_ips   = aws_instance.private[*].private_ip
+  })
+
+  root_block_device {
+    volume_size           = var.nat_root_volume_size
+    volume_type           = var.root_volume_type
+    encrypted             = var.root_volume_encrypted
+    delete_on_termination = true
+  }
+
+  lifecycle {
+    precondition {
+      condition     = !local.deploy_ssh_key_to_nat || local.nat_ssh_private_key_pem != null
+      error_message = "deploy_ssh_private_key_to_nat requires a module-managed key pair or ssh_private_key_pem."
+    }
+  }
 
   tags = merge(local.common_tags, {
     Name = "${var.name_prefix}-nat"
@@ -156,19 +198,4 @@ resource "aws_route" "private_nat" {
   network_interface_id   = aws_instance.nat.primary_network_interface_id
 
   depends_on = [aws_instance.nat]
-}
-
-resource "aws_instance" "private" {
-  count = var.private_instance_count
-
-  ami                    = local.private_instance_ami_id
-  instance_type          = var.private_instance_type
-  subnet_id              = aws_subnet.private.id
-  vpc_security_group_ids = [aws_security_group.private.id]
-  key_name               = var.key_name
-
-  tags = merge(local.common_tags, {
-    Name = "${var.name_prefix}-private-${count.index + 1}"
-    Role = "private"
-  })
 }

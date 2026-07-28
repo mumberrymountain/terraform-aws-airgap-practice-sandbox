@@ -27,7 +27,7 @@ data "aws_ami" "amazon_linux_2023" {
 
   filter {
     name   = "name"
-    values = ["al2023-ami-*-kernel-*-x86_64"]
+    values = ["al2023-ami-2023.*-kernel-*-x86_64"]
   }
 
   filter {
@@ -41,6 +41,10 @@ locals {
 
   private_instance_ami_id = coalesce(var.private_instance_ami, try(data.aws_ami.ubuntu_24[0].id, null))
   nat_instance_ami_id     = coalesce(var.nat_instance_ami, try(data.aws_ami.amazon_linux_2023[0].id, null))
+  key_name                = coalesce(var.key_name, try(aws_key_pair.this[0].key_name, null))
+  key_file_name           = "${coalesce(var.key_pair_name, "${var.name_prefix}-key")}.pem"
+  deploy_ssh_key_to_nat   = coalesce(var.deploy_ssh_private_key_to_nat, var.key_name == null)
+  nat_ssh_private_key_pem = coalesce(try(tls_private_key.ssh[0].private_key_pem, null), var.ssh_private_key_pem)
 
   common_tags = merge(
     var.tags,
@@ -49,15 +53,4 @@ locals {
     }
   )
 
-  nat_user_data = <<-EOF
-    #!/bin/bash
-    set -euxo pipefail
-
-    sysctl -w net.ipv4.ip_forward=1
-    grep -q '^net.ipv4.ip_forward' /etc/sysctl.conf || echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
-
-    PRIMARY_IF=$(ip -o -4 route show to default | awk '{print $$5}')
-    iptables -t nat -C POSTROUTING -o "$PRIMARY_IF" -j MASQUERADE 2>/dev/null || \
-      iptables -t nat -A POSTROUTING -o "$PRIMARY_IF" -j MASQUERADE
-  EOF
 }
