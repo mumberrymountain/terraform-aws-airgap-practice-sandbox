@@ -2,6 +2,12 @@ output "key_pair_name" {
   value = module.airgap.key_pair_name
 }
 
+output "private_key_pem" {
+  description = "Private key PEM for the module-created key pair. Null when an existing key_name was provided."
+  value       = module.airgap.private_key_pem
+  sensitive   = true
+}
+
 output "private_key_save_command" {
   value = module.airgap.private_key_save_command
 }

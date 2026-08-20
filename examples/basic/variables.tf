@@ -4,6 +4,20 @@ variable "aws_region" {
   default     = "ap-northeast-2"
 }
 
+variable "aws_access_key" {
+  description = "AWS access key ID. Leave null to use environment variables or the shared credentials file."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
+variable "aws_secret_key" {
+  description = "AWS secret access key. Leave null to use environment variables or the shared credentials file."
+  type        = string
+  default     = null
+  sensitive   = true
+}
+
 variable "name_prefix" {
   description = "Prefix for resource names."
   type        = string
