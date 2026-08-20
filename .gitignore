@@ -16,6 +16,11 @@ terraform.rc
 # Keep lock files for reproducible provider versions
 !.terraform.lock.hcl
 
+# Local variable values (may contain sensitive overrides)
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+
 # OS / editor
 .DS_Store
 Thumbs.db
